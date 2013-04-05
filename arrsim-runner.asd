@@ -25,6 +25,7 @@
                :com.dvlsoft.clon
                #+sbcl :sb-posix
                #+sbcl :sb-bsd-sockets
+               #+sbcl :sb-cover
                )
   :pathname "src/"
   :components ((:file "package")

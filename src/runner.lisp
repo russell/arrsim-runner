@@ -21,12 +21,44 @@
   (text :contents "Run the tests for a common lisp library.")
   (group (:header "Debugging options:")
          (flag :short-name "t" :long-name "trace"
-               :description "Trace function calls."))
+               :description "Trace function calls.")
+         (flag :short-name "c" :long-name "coverage"
+               :description "Generate a coverage report."))
   (group (:header "Immediate exit options:")
          (flag :short-name "h" :long-name "help"
                :description "Print this help and exit.")
          (flag :short-name "v" :long-name "version"
                :description "Print version number and exit.")))
+
+
+(defun getenv (name &optional default)
+  #+CMU
+  (let ((x (assoc name ext:*environment-list*
+                  :test #'string=)))
+    (if x (cdr x) default))
+  #-CMU
+  (or
+   #+Allegro (sys:getenv name)
+   #+CLISP (ext:getenv name)
+   #+ECL (si:getenv name)
+   #+SBCL (sb-unix::posix-getenv name)
+   #+LISPWORKS (lispworks:environment-variable name)
+   default))
+
+(defvar *pwd* (pathname (concatenate 'string (getenv "PWD") "/")))
+
+(defun enable-coverage ()
+  #+sbcl
+  (progn
+    (require 'sb-cover)
+    (declaim (optimize sb-cover:store-coverage-data))))
+
+(defun write-coverage ()
+  (let ((dir (merge-pathnames "coverage/" *pwd*)))
+    #+sbcl
+    (progn
+      (format t "writing coverage output to ~A~%" dir)
+      (sb-cover:report dir))))
 
 (defun safe-trace (sym package)
   (handler-bind ((simple-error
@@ -59,11 +91,18 @@
       ((< (length (remainder)) 1)
        (format t "ERROR, no system found.  At least one must be specified.~%")
        (considered-exit))))
-  (let ((package (intern (string-upcase (car (remainder))))))
-    (asdf:oos 'asdf:load-op package)
+  (let ((package (intern (string-upcase (car (remainder)))))
+        (coverage-p (getopt :short-name "c")))
+    (when coverage-p
+      (enable-coverage))
+    ;; load package
+    (asdf:oos 'asdf:load-op package :force t)
     (when (getopt :short-name "t")
       (trace-package package))
-    (asdf:oos 'asdf:test-op package)))
+    ;; run tests
+    (asdf:oos 'asdf:test-op package)
+    (when coverage-p
+      (write-coverage))))
 
 (defun entry-point ()
   (apply 'main "test-op" asdf/image:*command-line-arguments*))
