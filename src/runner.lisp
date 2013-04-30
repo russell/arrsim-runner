@@ -22,8 +22,13 @@
   (group (:header "Debugging options:")
          (flag :short-name "t" :long-name "trace"
                :description "Trace function calls.")
-         (flag :short-name "c" :long-name "coverage"
+         (lispobj :short-name "c" :long-name "coverage"
                :description "Generate a coverage report."))
+  (group (:header "FiveAM:")
+         (lispobj :long-name "fiveam"
+               :description "package to load.")
+         (lispobj :short-name "p" :long-name "package"
+               :description "package to load."))
   (group (:header "Immediate exit options:")
          (flag :short-name "h" :long-name "help"
                :description "Print this help and exit.")
@@ -80,28 +85,34 @@
   (do-symbols (sym package)
     (safe-trace sym package)))
 
+(defgeneric run-tests (runner package))
+
+(defmethod run-tests ((runner (eql :fiveam)) package)
+  (dolist (result (run package))
+    (print result)))
+
+(defmethod run-tests ((runner (eql :asdf)) package)
+  (asdf:oos 'asdf:test-op package))
+
 (defun main (&rest arguments)
   (make-context :cmdline arguments)
   (flet ((considered-exit () (help) (exit)))
-    (when (getopt :short-name "h") (considered-exit))
-    (cond
-      ((> (length (remainder)) 1)
-       (format t "ERROR, only one system allowed.~%")
-       (considered-exit))
-      ((< (length (remainder)) 1)
-       (format t "ERROR, no system found.  At least one must be specified.~%")
-       (considered-exit))))
-  (let ((package (intern (string-upcase (car (remainder)))))
-        (coverage-p (getopt :short-name "c")))
-    (when coverage-p
-      (enable-coverage))
+    (when (getopt :short-name "h") (considered-exit)))
+  (let ((package (getopt :short-name "p"))
+        (coverage (getopt :short-name "c"))
+        (fiveam (getopt :long-name "fiveam")))
     ;; load package
-    (asdf:oos 'asdf:load-op package :force t)
+    (asdf:oos 'asdf:load-op package)
+    (when coverage
+      (enable-coverage)
+      (asdf:oos 'asdf:load-op coverage :force t)
+      (asdf:oos 'asdf:load-op package :force t))
     (when (getopt :short-name "t")
       (trace-package package))
     ;; run tests
-    (asdf:oos 'asdf:test-op package)
-    (when coverage-p
+    (when fiveam
+      (run-tests :fiveam (intern (symbol-name fiveam) (find-package 'keyword))))
+    (when coverage
       (write-coverage))))
 
 (defun entry-point ()
