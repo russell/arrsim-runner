@@ -105,4 +105,4 @@
       (write-coverage))))
 
 (defun entry-point ()
-  (apply 'main "test-op" asdf/image:*command-line-arguments*))
+  (apply 'main "arrsim-runner" asdf/image:*command-line-arguments*))

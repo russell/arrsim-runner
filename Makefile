@@ -44,4 +44,6 @@ test-op:
 		--file .quicklisp-init.lisp \
 		--system arrsim-runner \
 		--restart "arrsim-runner:entry-point" \
-		--output ${INSTALL_BIN}/test-op
+		--output ${INSTALL_BIN}/arrsim-runner
+		# cl-launch defaults to executable so image mode wont work.
+	    # --dump ${INSTALL_IMAGE}/test-op.image
