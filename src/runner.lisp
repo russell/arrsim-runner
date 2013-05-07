@@ -88,7 +88,7 @@
 (defgeneric run-tests (runner package))
 
 (defmethod run-tests ((runner (eql :fiveam)) package)
-  (dolist (result (run package))
+  (dolist (result (run! package))
     (print result)))
 
 (defmethod run-tests ((runner (eql :asdf)) package)
