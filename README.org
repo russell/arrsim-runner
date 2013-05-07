@@ -1,0 +1,3 @@
+* Example usage
+
+  arrsim-runner -c cl-git -p cl-git-tests --fiveam cl-git
